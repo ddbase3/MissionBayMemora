@@ -6,7 +6,7 @@
 
 namespace MissionBayMemora\Resource;
 
-use MissionBay\Api\IAgentContext;
+use AssistantFoundation\Api\IAgentContext;
 use MissionBay\Api\IAgentPromptProvider;
 use MissionBay\Api\IAgentTool;
 use MissionBay\Resource\AbstractAgentResource;

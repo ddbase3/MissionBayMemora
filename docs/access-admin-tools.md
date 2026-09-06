@@ -1,14 +1,8 @@
-# MissionBayMemora Access and Role Tools
+# MissionBayMemora Access, Role and Permission Tools
 
-Package 06 adds access and role administration tools to MissionBayMemora.
+MissionBayMemora exposes entry ACL administration and RBAC administration through `ResourceFoundation\Api\IEntityAccessService`.
 
-The implementation remains a ResourceFoundation bridge. It consumes:
-
-```text
-ResourceFoundation\Api\IEntityAccessService
-```
-
-It does not call Memora tables or Memora implementation classes directly.
+The implementation remains a ResourceFoundation bridge. It does not call Memora tables or Memora implementation classes directly.
 
 ## Tool class
 
@@ -24,13 +18,25 @@ MissionBay\Api\IAgentResourceProvider
 MissionBay\Api\IAgentPromptProvider
 ```
 
-This makes the tool usable by MissionBay flows, internal chatbots, and MCP transports that expose MissionBay tools, resources, and prompts.
+## Access model
+
+Entry access and RBAC are deliberately separate:
+
+```text
+Entry ACL:
+  user/group -> entry access
+
+RBAC:
+  user/group -> role -> permission
+```
+
+Entry role access is no longer part of this plugin. Use `useraccess` and `groupaccess` for concrete entry ACL, and use roles/permissions for general capabilities.
 
 ## Read tools
 
 ### `memora_get_entry_access`
 
-Reads direct access grants for one entry.
+Reads direct user and group access grants for one entry.
 
 Arguments:
 
@@ -47,8 +53,7 @@ Result data contains:
   "entry_id": 123,
   "access": {
     "useraccess": [],
-    "groupaccess": [],
-    "roleaccess": []
+    "groupaccess": []
   }
 }
 ```
@@ -64,19 +69,60 @@ Arguments:
 ```json
 {
   "scope": "entry",
-  "permission": "edit",
-  "query": "editor",
+  "permission": "admin",
+  "query": "admin",
   "include_archived": false,
   "limit": 25,
   "offset": 0
 }
 ```
 
-The tool loads roles through `IEntityAccessService::getRoles()` and filters in the tool layer. Filtering is intentionally simple and stable: scope, permission, and a text query over common role fields.
+`scope` and `permission` filter against the permissions assigned to each role, not against fields on the role row. Role rows may include a `permissions` array returned by the ResourceFoundation implementation.
 
 ### `memora_get_role`
 
 Reads one role by id.
+
+Arguments:
+
+```json
+{
+  "role_id": 10
+}
+```
+
+### `memora_get_permissions`
+
+Lists permissions with optional filters.
+
+Arguments:
+
+```json
+{
+  "scope": "entry",
+  "permission": "admin",
+  "query": "entry",
+  "include_archived": false,
+  "limit": 25,
+  "offset": 0
+}
+```
+
+### `memora_get_permission`
+
+Reads one permission by id.
+
+Arguments:
+
+```json
+{
+  "permission_id": 7
+}
+```
+
+### `memora_get_role_permissions`
+
+Reads permissions assigned to one role.
 
 Arguments:
 
@@ -145,25 +191,22 @@ Arguments:
   "groups": [
     { "group_id": 2, "mode": "moderator" }
   ],
-  "roles": [
-    { "role_id": 10 }
-  ],
   "confirm": false
 }
 ```
 
-Only categories present in the arguments are replaced. For example, providing only `roles` changes only role access and leaves user and group access untouched.
+Only categories present in the arguments are replaced. For example, providing only `users` changes only user access and leaves group access untouched.
 
 Scalar shorthand is allowed:
 
 ```json
 {
   "entry_id": 123,
-  "roles": [10, 11]
+  "groups": [2, 3]
 }
 ```
 
-The tool normalizes this to rows with `role_id`. For user and group scalar shorthand, the tool uses `visitor` as the default mode because Memora user/group access rows require an explicit mode.
+The tool normalizes user and group scalar shorthand to rows with `visitor` as the default mode because Memora user/group access rows require an explicit mode.
 
 ### `memora_create_role`
 
@@ -173,9 +216,7 @@ Required fields:
 
 ```json
 {
-  "name": "project_editor",
-  "scope": "entry",
-  "permission": "edit"
+  "name": "project_editor"
 }
 ```
 
@@ -184,14 +225,15 @@ Optional fields:
 ```json
 {
   "label": "Project Editor",
-  "info": "Can edit entries shared through this role.",
+  "info": "Can edit entries when paired with suitable permissions.",
+  "permission_ids": [7, 8],
   "archive": false
 }
 ```
 
 ### `memora_update_role`
 
-Partially updates a role.
+Partially updates a role. Permission ids can be replaced as part of the update.
 
 Arguments:
 
@@ -199,7 +241,7 @@ Arguments:
 {
   "role_id": 10,
   "label": "Project Editor",
-  "info": "Updated description.",
+  "permission_ids": [7, 8],
   "confirm": false
 }
 ```
@@ -215,6 +257,70 @@ Arguments:
 ```json
 {
   "role_id": 10,
+  "confirm": false
+}
+```
+
+### `memora_create_permission`
+
+Creates a permission.
+
+Required fields:
+
+```json
+{
+  "scope": "entry",
+  "permission": "admin"
+}
+```
+
+Optional fields:
+
+```json
+{
+  "label": "Entry administration",
+  "info": "May bypass normal entry ACL checks.",
+  "archive": false
+}
+```
+
+### `memora_update_permission`
+
+Partially updates a permission.
+
+Arguments:
+
+```json
+{
+  "permission_id": 7,
+  "label": "Entry administration",
+  "confirm": false
+}
+```
+
+### `memora_archive_permission`
+
+Archives one permission. This requires destructive capability.
+
+Arguments:
+
+```json
+{
+  "permission_id": 7,
+  "confirm": false
+}
+```
+
+### `memora_replace_role_permissions`
+
+Replaces all permissions assigned to one role.
+
+Arguments:
+
+```json
+{
+  "role_id": 10,
+  "permission_ids": [7, 8],
   "confirm": false
 }
 ```
@@ -237,76 +343,3 @@ Arguments:
 ### `memora_replace_user_groups`
 
 Replaces all group memberships for one user.
-
-Arguments:
-
-```json
-{
-  "user_id": 5,
-  "group_ids": [2, 3],
-  "confirm": false
-}
-```
-
-## MCP resources
-
-The access tool exposes read-only resources:
-
-```text
-memora://roles
-memora://role/{role_id}
-memora://entry/{entry_id}/access
-```
-
-Resources never mutate state.
-
-## Prompts
-
-The access tool exposes prompts for safe model workflows:
-
-```text
-memora_explain_access
-memora_manage_entry_access
-memora_manage_roles
-memora_assign_roles
-```
-
-These prompts instruct the model to inspect current state first, prepare a proposed change, present it to the user, and only execute after explicit confirmation.
-
-## Capability policy
-
-Package 06 extends `MemoraAgentAccessPolicy` with these capabilities:
-
-```text
-access_read
-access_write
-role_admin
-membership_admin
-```
-
-Existing capabilities remain available:
-
-```text
-entry_write
-activity_read
-activity_write
-destructive
-```
-
-Important configuration flags:
-
-```text
-readonly
-allow_access_read
-allow_access_write
-allow_role_admin
-allow_membership_admin
-allow_destructive
-require_confirmation
-allowed_capabilities
-denied_capabilities
-```
-
-`require_confirmation` defaults to true.
-
-`allow_destructive` defaults to false. This keeps `memora_archive_role` disabled unless the tool configuration explicitly allows destructive operations.

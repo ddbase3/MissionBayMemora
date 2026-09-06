@@ -197,6 +197,9 @@ Read functions:
 memora_get_entry_access
 memora_get_roles
 memora_get_role
+memora_get_permissions
+memora_get_permission
+memora_get_role_permissions
 memora_get_principal_roles
 ```
 
@@ -207,11 +210,15 @@ memora_set_entry_access
 memora_create_role
 memora_update_role
 memora_archive_role
+memora_create_permission
+memora_update_permission
+memora_archive_permission
+memora_replace_role_permissions
 memora_replace_principal_roles
 memora_replace_user_groups
 ```
 
-`memora_archive_role` is treated as destructive and requires `allow_destructive=true` in the tool/resource configuration.
+Entry access is limited to direct user/group ACL. Roles and permissions are administered separately as RBAC. `memora_archive_role` and `memora_archive_permission` are treated as destructive and require `allow_destructive=true` in the tool/resource configuration.
 
 ### MemoraProfileAgentTool
 

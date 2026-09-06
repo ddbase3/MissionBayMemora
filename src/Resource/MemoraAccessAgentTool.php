@@ -6,7 +6,7 @@
 
 namespace MissionBayMemora\Resource;
 
-use MissionBay\Api\IAgentContext;
+use AssistantFoundation\Api\IAgentContext;
 use MissionBay\Api\IAgentPromptProvider;
 use MissionBay\Api\IAgentResourceProvider;
 use MissionBay\Api\IAgentTool;
@@ -17,9 +17,10 @@ use MissionBayMemora\Service\MemoraAgentResultBuilder;
 use ResourceFoundation\Api\IEntityAccessService;
 
 /**
- * Memora/XRM access and role administration tool.
+ * Memora/XRM access and RBAC administration tool.
  *
- * Read functions expose entry access, roles, and principal role mappings.
+ * Entry access stays attached directly to users and groups. Roles,
+ * permissions, and role-permission assignments are administered separately.
  * Mutating functions are confirmation-aware and should be executed only after
  * the model presented the proposed change to the user and received approval.
  */
@@ -28,11 +29,18 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
         private const TOOL_GET_ENTRY_ACCESS = 'memora_get_entry_access';
         private const TOOL_GET_ROLES = 'memora_get_roles';
         private const TOOL_GET_ROLE = 'memora_get_role';
+        private const TOOL_GET_PERMISSIONS = 'memora_get_permissions';
+        private const TOOL_GET_PERMISSION = 'memora_get_permission';
+        private const TOOL_GET_ROLE_PERMISSIONS = 'memora_get_role_permissions';
         private const TOOL_GET_PRINCIPAL_ROLES = 'memora_get_principal_roles';
         private const TOOL_SET_ENTRY_ACCESS = 'memora_set_entry_access';
         private const TOOL_CREATE_ROLE = 'memora_create_role';
         private const TOOL_UPDATE_ROLE = 'memora_update_role';
         private const TOOL_ARCHIVE_ROLE = 'memora_archive_role';
+        private const TOOL_CREATE_PERMISSION = 'memora_create_permission';
+        private const TOOL_UPDATE_PERMISSION = 'memora_update_permission';
+        private const TOOL_ARCHIVE_PERMISSION = 'memora_archive_permission';
+        private const TOOL_REPLACE_ROLE_PERMISSIONS = 'memora_replace_role_permissions';
         private const TOOL_REPLACE_PRINCIPAL_ROLES = 'memora_replace_principal_roles';
         private const TOOL_REPLACE_USER_GROUPS = 'memora_replace_user_groups';
 
@@ -58,7 +66,7 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
         }
 
         public function getDescription(): string {
-                return 'Provides Memora/XRM access, role, and membership tools with confirmation-aware administration operations.';
+                return 'Provides Memora/XRM entry access, role, permission, and membership tools with confirmation-aware administration operations.';
         }
 
         public function getToolDefinitions(): array {
@@ -67,11 +75,11 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                                 'type' => 'function',
                                 'label' => 'Memora Get Entry Access',
                                 'category' => 'memora',
-                                'tags' => ['memora', 'xrm', 'access', 'roles', 'readonly'],
+                                'tags' => ['memora', 'xrm', 'access', 'readonly'],
                                 'priority' => 65,
                                 'function' => [
                                         'name' => self::TOOL_GET_ENTRY_ACCESS,
-                                        'description' => 'Read direct user, group, and role access grants for one Memora/XRM entry.',
+                                        'description' => 'Read direct user and group access grants for one Memora/XRM entry.',
                                         'parameters' => [
                                                 'type' => 'object',
                                                 'properties' => [
@@ -91,21 +99,21 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                                 'priority' => 70,
                                 'function' => [
                                         'name' => self::TOOL_GET_ROLES,
-                                        'description' => 'List Memora/XRM roles with optional scope, permission and text filters.',
+                                        'description' => 'List Memora/XRM roles. Roles may include their assigned permissions in the returned rows.',
                                         'parameters' => [
                                                 'type' => 'object',
                                                 'properties' => [
                                                         'scope' => [
                                                                 'type' => 'string',
-                                                                'description' => 'Optional role scope filter, for example entry.'
+                                                                'description' => 'Optional permission scope filter. Matches assigned role permissions, not role fields.'
                                                         ],
                                                         'permission' => [
                                                                 'type' => 'string',
-                                                                'description' => 'Optional role permission filter, for example view or edit.'
+                                                                'description' => 'Optional permission name filter. Matches assigned role permissions, not role fields.'
                                                         ],
                                                         'query' => [
                                                                 'type' => 'string',
-                                                                'description' => 'Optional text filter matched against role name, label, scope, permission and info.'
+                                                                'description' => 'Optional text filter matched against role fields and assigned permission fields.'
                                                         ],
                                                         'include_archived' => [
                                                                 'type' => 'boolean',
@@ -133,6 +141,87 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                                 'function' => [
                                         'name' => self::TOOL_GET_ROLE,
                                         'description' => 'Read one Memora/XRM role by id.',
+                                        'parameters' => [
+                                                'type' => 'object',
+                                                'properties' => [
+                                                        'role_id' => [
+                                                                'description' => 'Required role id.'
+                                                        ]
+                                                ],
+                                                'required' => ['role_id']
+                                        ]
+                                ]
+                        ],
+                        [
+                                'type' => 'function',
+                                'label' => 'Memora Get Permissions',
+                                'category' => 'memora',
+                                'tags' => ['memora', 'xrm', 'access', 'permissions', 'readonly'],
+                                'priority' => 70,
+                                'function' => [
+                                        'name' => self::TOOL_GET_PERMISSIONS,
+                                        'description' => 'List Memora/XRM permissions with optional scope, permission and text filters.',
+                                        'parameters' => [
+                                                'type' => 'object',
+                                                'properties' => [
+                                                        'scope' => [
+                                                                'type' => 'string',
+                                                                'description' => 'Optional permission scope filter, for example entry.'
+                                                        ],
+                                                        'permission' => [
+                                                                'type' => 'string',
+                                                                'description' => 'Optional permission name filter, for example admin.'
+                                                        ],
+                                                        'query' => [
+                                                                'type' => 'string',
+                                                                'description' => 'Optional text filter matched against permission scope, permission, label and info.'
+                                                        ],
+                                                        'include_archived' => [
+                                                                'type' => 'boolean',
+                                                                'description' => 'Whether archived permissions should be returned. Default false.'
+                                                        ],
+                                                        'limit' => [
+                                                                'type' => 'integer',
+                                                                'description' => 'Maximum permissions to return. Default: 25. Hard maximum: 100.'
+                                                        ],
+                                                        'offset' => [
+                                                                'type' => 'integer',
+                                                                'description' => 'Pagination offset after filtering.'
+                                                        ]
+                                                ],
+                                                'required' => []
+                                        ]
+                                ]
+                        ],
+                        [
+                                'type' => 'function',
+                                'label' => 'Memora Get Permission',
+                                'category' => 'memora',
+                                'tags' => ['memora', 'xrm', 'access', 'permission', 'readonly'],
+                                'priority' => 70,
+                                'function' => [
+                                        'name' => self::TOOL_GET_PERMISSION,
+                                        'description' => 'Read one Memora/XRM permission by id.',
+                                        'parameters' => [
+                                                'type' => 'object',
+                                                'properties' => [
+                                                        'permission_id' => [
+                                                                'description' => 'Required permission id.'
+                                                        ]
+                                                ],
+                                                'required' => ['permission_id']
+                                        ]
+                                ]
+                        ],
+                        [
+                                'type' => 'function',
+                                'label' => 'Memora Get Role Permissions',
+                                'category' => 'memora',
+                                'tags' => ['memora', 'xrm', 'access', 'roles', 'permissions', 'readonly'],
+                                'priority' => 65,
+                                'function' => [
+                                        'name' => self::TOOL_GET_ROLE_PERMISSIONS,
+                                        'description' => 'Read permissions assigned to one role.',
                                         'parameters' => [
                                                 'type' => 'object',
                                                 'properties' => [
@@ -181,11 +270,11 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                                 'type' => 'function',
                                 'label' => 'Memora Set Entry Access',
                                 'category' => 'memora',
-                                'tags' => ['memora', 'xrm', 'access', 'roles', 'write', 'confirmation'],
+                                'tags' => ['memora', 'xrm', 'access', 'write', 'confirmation'],
                                 'priority' => 45,
                                 'function' => [
                                         'name' => self::TOOL_SET_ENTRY_ACCESS,
-                                        'description' => 'Prepare or execute replacing entry user, group, and/or role access grants. First call with confirm=false to get a review plan. Execute only after user approval with confirm=true.',
+                                        'description' => 'Prepare or execute replacing entry user and/or group access grants. First call with confirm=false to get a review plan. Execute only after user approval with confirm=true.',
                                         'parameters' => [
                                                 'type' => 'object',
                                                 'properties' => [
@@ -199,10 +288,6 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                                                         'groups' => [
                                                                 'type' => 'array',
                                                                 'description' => 'Optional complete replacement list for group access. Items may be group ids or rows with group_id and mode.'
-                                                        ],
-                                                        'roles' => [
-                                                                'type' => 'array',
-                                                                'description' => 'Optional complete replacement list for role access. Items may be role ids or rows with role_id.'
                                                         ],
                                                         'confirm' => [
                                                                 'type' => 'boolean',
@@ -221,7 +306,7 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                                 'priority' => 40,
                                 'function' => [
                                         'name' => self::TOOL_CREATE_ROLE,
-                                        'description' => 'Prepare or execute creation of a Memora/XRM role. Requires name, scope and permission. Execute only after user approval with confirm=true.',
+                                        'description' => 'Prepare or execute creation of a Memora/XRM role. Requires name. Permission ids may be assigned during creation. Execute only after user approval with confirm=true.',
                                         'parameters' => [
                                                 'type' => 'object',
                                                 'properties' => $this->roleSchemaProperties() + [
@@ -230,7 +315,7 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                                                                 'description' => 'Must be true after user confirmation to execute.'
                                                         ]
                                                 ],
-                                                'required' => ['name', 'scope', 'permission']
+                                                'required' => ['name']
                                         ]
                                 ]
                         ],
@@ -242,7 +327,7 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                                 'priority' => 40,
                                 'function' => [
                                         'name' => self::TOOL_UPDATE_ROLE,
-                                        'description' => 'Prepare or execute a partial role update. Execute only after user approval with confirm=true.',
+                                        'description' => 'Prepare or execute a partial role update. Permission ids may be replaced as part of the update. Execute only after user approval with confirm=true.',
                                         'parameters' => [
                                                 'type' => 'object',
                                                 'properties' => [
@@ -280,6 +365,104 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                                                         ]
                                                 ],
                                                 'required' => ['role_id']
+                                        ]
+                                ]
+                        ],
+                        [
+                                'type' => 'function',
+                                'label' => 'Memora Create Permission',
+                                'category' => 'memora',
+                                'tags' => ['memora', 'xrm', 'access', 'permission', 'admin', 'write', 'confirmation'],
+                                'priority' => 40,
+                                'function' => [
+                                        'name' => self::TOOL_CREATE_PERMISSION,
+                                        'description' => 'Prepare or execute creation of a Memora/XRM permission. Requires scope and permission. Execute only after user approval with confirm=true.',
+                                        'parameters' => [
+                                                'type' => 'object',
+                                                'properties' => $this->permissionSchemaProperties() + [
+                                                        'confirm' => [
+                                                                'type' => 'boolean',
+                                                                'description' => 'Must be true after user confirmation to execute.'
+                                                        ]
+                                                ],
+                                                'required' => ['scope', 'permission']
+                                        ]
+                                ]
+                        ],
+                        [
+                                'type' => 'function',
+                                'label' => 'Memora Update Permission',
+                                'category' => 'memora',
+                                'tags' => ['memora', 'xrm', 'access', 'permission', 'admin', 'write', 'confirmation'],
+                                'priority' => 40,
+                                'function' => [
+                                        'name' => self::TOOL_UPDATE_PERMISSION,
+                                        'description' => 'Prepare or execute a partial permission update. Execute only after user approval with confirm=true.',
+                                        'parameters' => [
+                                                'type' => 'object',
+                                                'properties' => [
+                                                        'permission_id' => [
+                                                                'description' => 'Required permission id.'
+                                                        ]
+                                                ] + $this->permissionSchemaProperties() + [
+                                                        'confirm' => [
+                                                                'type' => 'boolean',
+                                                                'description' => 'Must be true after user confirmation to execute.'
+                                                        ]
+                                                ],
+                                                'required' => ['permission_id']
+                                        ]
+                                ]
+                        ],
+                        [
+                                'type' => 'function',
+                                'label' => 'Memora Archive Permission',
+                                'category' => 'memora',
+                                'tags' => ['memora', 'xrm', 'access', 'permission', 'admin', 'destructive', 'confirmation'],
+                                'priority' => 30,
+                                'function' => [
+                                        'name' => self::TOOL_ARCHIVE_PERMISSION,
+                                        'description' => 'Prepare or execute archiving one permission. This is treated as a destructive administration action and should be exposed only to trusted clients.',
+                                        'parameters' => [
+                                                'type' => 'object',
+                                                'properties' => [
+                                                        'permission_id' => [
+                                                                'description' => 'Required permission id.'
+                                                        ],
+                                                        'confirm' => [
+                                                                'type' => 'boolean',
+                                                                'description' => 'Must be true after user confirmation to execute.'
+                                                        ]
+                                                ],
+                                                'required' => ['permission_id']
+                                        ]
+                                ]
+                        ],
+                        [
+                                'type' => 'function',
+                                'label' => 'Memora Replace Role Permissions',
+                                'category' => 'memora',
+                                'tags' => ['memora', 'xrm', 'access', 'roles', 'permissions', 'write', 'confirmation'],
+                                'priority' => 40,
+                                'function' => [
+                                        'name' => self::TOOL_REPLACE_ROLE_PERMISSIONS,
+                                        'description' => 'Prepare or execute replacing all permissions assigned to one role. Execute only after user approval with confirm=true.',
+                                        'parameters' => [
+                                                'type' => 'object',
+                                                'properties' => [
+                                                        'role_id' => [
+                                                                'description' => 'Required role id.'
+                                                        ],
+                                                        'permission_ids' => [
+                                                                'type' => 'array',
+                                                                'description' => 'Complete replacement list of permission ids.'
+                                                        ],
+                                                        'confirm' => [
+                                                                'type' => 'boolean',
+                                                                'description' => 'Must be true after user confirmation to execute.'
+                                                        ]
+                                                ],
+                                                'required' => ['role_id', 'permission_ids']
                                         ]
                                 ]
                         ],
@@ -357,11 +540,18 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                                 self::TOOL_GET_ENTRY_ACCESS => $this->getEntryAccess($arguments, $context),
                                 self::TOOL_GET_ROLES => $this->getRoles($arguments, $context),
                                 self::TOOL_GET_ROLE => $this->getRole($arguments, $context),
+                                self::TOOL_GET_PERMISSIONS => $this->getPermissions($arguments, $context),
+                                self::TOOL_GET_PERMISSION => $this->getPermission($arguments, $context),
+                                self::TOOL_GET_ROLE_PERMISSIONS => $this->getRolePermissions($arguments, $context),
                                 self::TOOL_GET_PRINCIPAL_ROLES => $this->getPrincipalRoles($arguments, $context),
                                 self::TOOL_SET_ENTRY_ACCESS => $this->setEntryAccess($arguments, $context),
                                 self::TOOL_CREATE_ROLE => $this->createRole($arguments, $context),
                                 self::TOOL_UPDATE_ROLE => $this->updateRole($arguments, $context),
                                 self::TOOL_ARCHIVE_ROLE => $this->archiveRole($arguments, $context),
+                                self::TOOL_CREATE_PERMISSION => $this->createPermission($arguments, $context),
+                                self::TOOL_UPDATE_PERMISSION => $this->updatePermission($arguments, $context),
+                                self::TOOL_ARCHIVE_PERMISSION => $this->archivePermission($arguments, $context),
+                                self::TOOL_REPLACE_ROLE_PERMISSIONS => $this->replaceRolePermissions($arguments, $context),
                                 self::TOOL_REPLACE_PRINCIPAL_ROLES => $this->replacePrincipalRoles($arguments, $context),
                                 self::TOOL_REPLACE_USER_GROUPS => $this->replaceUserGroups($arguments, $context),
                                 default => throw new \InvalidArgumentException('Unsupported tool: ' . $name)
@@ -394,10 +584,31 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                                 'mimeType' => 'application/json'
                         ],
                         [
+                                'uri' => 'memora://permissions',
+                                'name' => 'memora-permissions',
+                                'title' => 'Memora Permissions',
+                                'description' => 'Lists Memora/XRM permissions visible to the current runtime.',
+                                'mimeType' => 'application/json'
+                        ],
+                        [
+                                'uriTemplate' => 'memora://permission/{permission_id}',
+                                'name' => 'memora-permission-template',
+                                'title' => 'Memora Permission',
+                                'description' => 'Reads one Memora/XRM permission by id.',
+                                'mimeType' => 'application/json'
+                        ],
+                        [
+                                'uriTemplate' => 'memora://role/{role_id}/permissions',
+                                'name' => 'memora-role-permissions-template',
+                                'title' => 'Memora Role Permissions',
+                                'description' => 'Reads permissions assigned to one Memora/XRM role.',
+                                'mimeType' => 'application/json'
+                        ],
+                        [
                                 'uriTemplate' => 'memora://entry/{entry_id}/access',
                                 'name' => 'memora-entry-access-template',
                                 'title' => 'Memora Entry Access',
-                                'description' => 'Reads direct access grants for one Memora/XRM entry.',
+                                'description' => 'Reads direct user and group access grants for one Memora/XRM entry.',
                                 'mimeType' => 'application/json'
                         ]
                 ];
@@ -408,10 +619,27 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                         return $this->resultBuilder->resource($uri, $this->getRoles(['limit' => self::MAX_LIMIT], $context));
                 }
 
+                if ($uri === 'memora://permissions') {
+                        return $this->resultBuilder->resource($uri, $this->getPermissions(['limit' => self::MAX_LIMIT], $context));
+                }
+
+                $rolePermissionPrefix = 'memora://role/';
+                $rolePermissionSuffix = '/permissions';
+                if (str_starts_with($uri, $rolePermissionPrefix) && str_ends_with($uri, $rolePermissionSuffix)) {
+                        $roleId = rawurldecode(substr($uri, strlen($rolePermissionPrefix), -strlen($rolePermissionSuffix)));
+                        return $this->resultBuilder->resource($uri, $this->getRolePermissions(['role_id' => $roleId], $context));
+                }
+
                 $rolePrefix = 'memora://role/';
                 if (str_starts_with($uri, $rolePrefix)) {
                         $roleId = rawurldecode(substr($uri, strlen($rolePrefix)));
                         return $this->resultBuilder->resource($uri, $this->getRole(['role_id' => $roleId], $context));
+                }
+
+                $permissionPrefix = 'memora://permission/';
+                if (str_starts_with($uri, $permissionPrefix)) {
+                        $permissionId = rawurldecode(substr($uri, strlen($permissionPrefix)));
+                        return $this->resultBuilder->resource($uri, $this->getPermission(['permission_id' => $permissionId], $context));
                 }
 
                 $entryPrefix = 'memora://entry/';
@@ -450,6 +678,12 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                                 'arguments' => []
                         ],
                         [
+                                'name' => 'memora_manage_permissions',
+                                'title' => 'Manage Memora Permissions With Confirmation',
+                                'description' => 'Guide the model to list, create, update, archive or assign permissions safely.',
+                                'arguments' => []
+                        ],
+                        [
                                 'name' => 'memora_assign_roles',
                                 'title' => 'Assign Memora Roles With Confirmation',
                                 'description' => 'Guide the model to prepare direct user/group role assignment changes and wait for confirmation before executing.',
@@ -468,9 +702,10 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                         $entryId = $this->normalizer->normalizeString($arguments['entry_id'] ?? '');
                         $userId = $this->normalizer->normalizeString($arguments['user_id'] ?? '');
                         $lines = [
-                                'Use memora_get_entry_access to inspect direct entry grants.',
-                                'Use memora_get_principal_roles with principal_type "user" when the user asks why a person has access.',
-                                'Explain separately direct user access, group access, role access, and effective roles.'
+                                'Use memora_get_entry_access to inspect direct user and group entry grants.',
+                                'Use memora_get_principal_roles with principal_type "user" when the user asks which roles a person has.',
+                                'Use memora_get_role_permissions to inspect what a role grants.',
+                                'Explain separately direct entry ACL, direct roles, inherited roles, and role permissions.'
                         ];
                         if ($entryId !== '') $lines[] = 'Preferred entry id: ' . $entryId;
                         if ($userId !== '') $lines[] = 'Preferred user id: ' . $userId;
@@ -481,10 +716,11 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                 if ($name === 'memora_manage_entry_access') {
                         $entryId = $this->normalizer->normalizeString($arguments['entry_id'] ?? '');
                         $lines = [
-                                'Use memora_get_entry_access first to inspect the current grants.',
+                                'Use memora_get_entry_access first to inspect the current user and group grants.',
                                 'Prepare the complete replacement lists for only the access categories the user wants to change.',
                                 'Call memora_set_entry_access with confirm=false first and present the returned plan to the user.',
-                                'Do not call memora_set_entry_access with confirm=true until the user explicitly approves the exact replacement plan.'
+                                'Do not call memora_set_entry_access with confirm=true until the user explicitly approves the exact replacement plan.',
+                                'Do not use roles as entry access subjects; roles are administered separately through permissions.'
                         ];
                         if ($entryId !== '') $lines[] = 'Preferred entry id: ' . $entryId;
 
@@ -495,10 +731,24 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                         return $this->resultBuilder->prompt(
                                 'Manage Memora roles with confirmation.',
                                 implode("\n", [
-                                        'Use memora_get_roles before creating or changing roles so the user can compare existing scope and permission names.',
-                                        'Use memora_create_role or memora_update_role with confirm=false first.',
+                                        'Use memora_get_roles before creating or changing roles so the user can compare existing names.',
+                                        'Use memora_get_permissions before assigning permissions to a role.',
+                                        'Use memora_create_role, memora_update_role, or memora_replace_role_permissions with confirm=false first.',
                                         'Present the role plan clearly. Execute with confirm=true only after explicit approval.',
                                         'Use memora_archive_role only for trusted administration workflows.'
+                                ])
+                        );
+                }
+
+                if ($name === 'memora_manage_permissions') {
+                        return $this->resultBuilder->prompt(
+                                'Manage Memora permissions with confirmation.',
+                                implode("\n", [
+                                        'Use memora_get_permissions before creating or changing permissions so the user can compare existing scope/permission pairs.',
+                                        'Use memora_create_permission or memora_update_permission with confirm=false first.',
+                                        'Use memora_replace_role_permissions with confirm=false when assigning permissions to a role.',
+                                        'Present the permission plan clearly. Execute with confirm=true only after explicit approval.',
+                                        'Use memora_archive_permission only for trusted administration workflows.'
                                 ])
                         );
                 }
@@ -564,11 +814,13 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
 
                 $roles = $this->accessService->getRoles($includeArchived);
                 $roles = array_values(array_filter($roles, function(array $role) use ($scope, $permission, $query): bool {
-                        if ($scope !== '' && $this->normalizer->normalizeToken((string)($role['scope'] ?? '')) !== $scope) {
+                        $permissions = is_array($role['permissions'] ?? null) ? $role['permissions'] : [];
+
+                        if ($scope !== '' && !$this->roleHasPermissionField($permissions, 'scope', $scope)) {
                                 return false;
                         }
 
-                        if ($permission !== '' && $this->normalizer->normalizeToken((string)($role['permission'] ?? '')) !== $permission) {
+                        if ($permission !== '' && !$this->roleHasPermissionField($permissions, 'permission', $permission)) {
                                 return false;
                         }
 
@@ -576,23 +828,24 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                                 return true;
                         }
 
-                        $haystack = mb_strtolower(implode(' ', [
+                        $haystackParts = [
                                 (string)($role['name'] ?? ''),
                                 (string)($role['label'] ?? ''),
-                                (string)($role['scope'] ?? ''),
-                                (string)($role['permission'] ?? ''),
                                 (string)($role['info'] ?? '')
-                        ]));
+                        ];
 
-                        return str_contains($haystack, $query);
+                        foreach ($permissions as $permissionRow) {
+                                if (!is_array($permissionRow)) continue;
+                                $haystackParts[] = (string)($permissionRow['scope'] ?? '');
+                                $haystackParts[] = (string)($permissionRow['permission'] ?? '');
+                                $haystackParts[] = (string)($permissionRow['label'] ?? '');
+                                $haystackParts[] = (string)($permissionRow['info'] ?? '');
+                        }
+
+                        return str_contains(mb_strtolower(implode(' ', $haystackParts)), $query);
                 }));
 
                 usort($roles, static function(array $a, array $b): int {
-                        $scopeCompare = strcmp((string)($a['scope'] ?? ''), (string)($b['scope'] ?? ''));
-                        if ($scopeCompare !== 0) {
-                                return $scopeCompare;
-                        }
-
                         return strcmp((string)($a['name'] ?? ''), (string)($b['name'] ?? ''));
                 });
 
@@ -640,6 +893,127 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                         [
                                 'role_id' => $roleId,
                                 'role' => $role
+                        ]
+                );
+        }
+
+        /**
+         * @param array<string,mixed> $arguments
+         * @return array<string,mixed>
+         */
+        private function getPermissions(array $arguments, IAgentContext $context): array {
+                if (!$this->accessPolicy->isAllowed(MemoraAgentAccessPolicy::CAPABILITY_ACCESS_READ, $this->config, $context)) {
+                        return $this->resultBuilder->error(self::TOOL_GET_PERMISSIONS, 'capability_denied', 'Permission reading is not allowed for this tool configuration.');
+                }
+
+                $includeArchived = $this->normalizer->normalizeBool($arguments['include_archived'] ?? false, false);
+                $scope = $this->normalizer->normalizeToken((string)($arguments['scope'] ?? ''));
+                $permission = $this->normalizer->normalizeToken((string)($arguments['permission'] ?? ''));
+                $query = mb_strtolower($this->normalizer->normalizeString($arguments['query'] ?? ''));
+                $limit = $this->normalizer->normalizeLimit($arguments['limit'] ?? 25, 25, self::MAX_LIMIT);
+                $offset = $this->normalizer->normalizeOffset($arguments['offset'] ?? 0);
+
+                $permissions = $this->accessService->getPermissions($includeArchived);
+                $permissions = array_values(array_filter($permissions, function(array $row) use ($scope, $permission, $query): bool {
+                        if ($scope !== '' && $this->normalizer->normalizeToken((string)($row['scope'] ?? '')) !== $scope) {
+                                return false;
+                        }
+
+                        if ($permission !== '' && $this->normalizer->normalizeToken((string)($row['permission'] ?? '')) !== $permission) {
+                                return false;
+                        }
+
+                        if ($query === '') {
+                                return true;
+                        }
+
+                        $haystack = mb_strtolower(implode(' ', [
+                                (string)($row['scope'] ?? ''),
+                                (string)($row['permission'] ?? ''),
+                                (string)($row['label'] ?? ''),
+                                (string)($row['info'] ?? '')
+                        ]));
+
+                        return str_contains($haystack, $query);
+                }));
+
+                usort($permissions, static function(array $a, array $b): int {
+                        $scopeCompare = strcmp((string)($a['scope'] ?? ''), (string)($b['scope'] ?? ''));
+                        if ($scopeCompare !== 0) {
+                                return $scopeCompare;
+                        }
+
+                        return strcmp((string)($a['permission'] ?? ''), (string)($b['permission'] ?? ''));
+                });
+
+                $total = count($permissions);
+                $items = array_slice($permissions, $offset, $limit);
+
+                return $this->resultBuilder->success(
+                        self::TOOL_GET_PERMISSIONS,
+                        $items !== [] ? 'Permissions loaded.' : 'No permissions found.',
+                        [
+                                'filters' => [
+                                        'scope' => $scope,
+                                        'permission' => $permission,
+                                        'query' => $query,
+                                        'include_archived' => $includeArchived
+                                ]
+                        ],
+                        $items,
+                        $this->resultBuilder->paging($offset, $limit, $total, count($items), $total > ($offset + count($items)))
+                );
+        }
+
+        /**
+         * @param array<string,mixed> $arguments
+         * @return array<string,mixed>
+         */
+        private function getPermission(array $arguments, IAgentContext $context): array {
+                if (!$this->accessPolicy->isAllowed(MemoraAgentAccessPolicy::CAPABILITY_ACCESS_READ, $this->config, $context)) {
+                        return $this->resultBuilder->error(self::TOOL_GET_PERMISSION, 'capability_denied', 'Permission reading is not allowed for this tool configuration.');
+                }
+
+                $permissionId = $arguments['permission_id'] ?? null;
+                if ($permissionId === null || $permissionId === '') {
+                        return $this->resultBuilder->error(self::TOOL_GET_PERMISSION, 'missing_permission_id', 'Missing required parameter: permission_id.');
+                }
+
+                $permission = $this->accessService->getPermission($permissionId);
+                if ($permission === null) {
+                        return $this->resultBuilder->error(self::TOOL_GET_PERMISSION, 'permission_not_found', 'Permission not found.');
+                }
+
+                return $this->resultBuilder->success(
+                        self::TOOL_GET_PERMISSION,
+                        'Permission loaded.',
+                        [
+                                'permission_id' => $permissionId,
+                                'permission' => $permission
+                        ]
+                );
+        }
+
+        /**
+         * @param array<string,mixed> $arguments
+         * @return array<string,mixed>
+         */
+        private function getRolePermissions(array $arguments, IAgentContext $context): array {
+                if (!$this->accessPolicy->isAllowed(MemoraAgentAccessPolicy::CAPABILITY_ACCESS_READ, $this->config, $context)) {
+                        return $this->resultBuilder->error(self::TOOL_GET_ROLE_PERMISSIONS, 'capability_denied', 'Role permission reading is not allowed for this tool configuration.');
+                }
+
+                $roleId = $arguments['role_id'] ?? null;
+                if ($roleId === null || $roleId === '') {
+                        return $this->resultBuilder->error(self::TOOL_GET_ROLE_PERMISSIONS, 'missing_role_id', 'Missing required parameter: role_id.');
+                }
+
+                return $this->resultBuilder->success(
+                        self::TOOL_GET_ROLE_PERMISSIONS,
+                        'Role permissions loaded.',
+                        [
+                                'role_id' => $roleId,
+                                'permissions' => $this->accessService->getRolePermissions($roleId)
                         ]
                 );
         }
@@ -711,11 +1085,11 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                 }
 
                 if (array_key_exists('roles', $arguments)) {
-                        $plan['replace']['roles'] = $this->normalizeAccessRows($arguments['roles'], 'role_id', false);
+                        return $this->resultBuilder->error(self::TOOL_SET_ENTRY_ACCESS, 'role_access_removed', 'Entry role access is no longer supported. Use roles and permissions for RBAC, and user/group access for entry ACL.');
                 }
 
                 if ($plan['replace'] === []) {
-                        return $this->resultBuilder->error(self::TOOL_SET_ENTRY_ACCESS, 'empty_access_change', 'Provide at least one of users, groups or roles to replace.');
+                        return $this->resultBuilder->error(self::TOOL_SET_ENTRY_ACCESS, 'empty_access_change', 'Provide users and/or groups to replace.');
                 }
 
                 if ($this->needsConfirmation($arguments)) {
@@ -728,10 +1102,6 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
 
                 if (array_key_exists('groups', $plan['replace'])) {
                         $this->accessService->replaceEntryGroupAccess($entryId, $plan['replace']['groups']);
-                }
-
-                if (array_key_exists('roles', $plan['replace'])) {
-                        $this->accessService->replaceEntryRoleAccess($entryId, $plan['replace']['roles']);
                 }
 
                 return $this->resultBuilder->success(
@@ -755,7 +1125,7 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
 
                 $role = $this->normalizeRoleData($arguments, true);
                 if ($role === []) {
-                        return $this->resultBuilder->error(self::TOOL_CREATE_ROLE, 'invalid_role', 'Role creation requires name, scope and permission.');
+                        return $this->resultBuilder->error(self::TOOL_CREATE_ROLE, 'invalid_role', 'Role creation requires name.');
                 }
 
                 $plan = [
@@ -854,6 +1224,149 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
          * @param array<string,mixed> $arguments
          * @return array<string,mixed>
          */
+        private function createPermission(array $arguments, IAgentContext $context): array {
+                if (!$this->accessPolicy->isAllowed(MemoraAgentAccessPolicy::CAPABILITY_ROLE_ADMIN, $this->config, $context)) {
+                        return $this->resultBuilder->error(self::TOOL_CREATE_PERMISSION, 'capability_denied', 'Permission administration is not allowed for this tool configuration.');
+                }
+
+                $permission = $this->normalizePermissionData($arguments, true);
+                if ($permission === []) {
+                        return $this->resultBuilder->error(self::TOOL_CREATE_PERMISSION, 'invalid_permission', 'Permission creation requires scope and permission.');
+                }
+
+                $plan = [
+                        'operation' => 'create_permission',
+                        'permission' => $permission
+                ];
+
+                if ($this->needsConfirmation($arguments)) {
+                        return $this->confirmation(self::TOOL_CREATE_PERMISSION, 'Permission creation requires user confirmation before execution.', $plan, $arguments);
+                }
+
+                $permissionId = $this->accessService->createPermission($permission);
+
+                return $this->resultBuilder->success(
+                        self::TOOL_CREATE_PERMISSION,
+                        'Permission created.',
+                        [
+                                'permission_id' => $permissionId,
+                                'permission' => $this->accessService->getPermission($permissionId)
+                        ]
+                );
+        }
+
+        /**
+         * @param array<string,mixed> $arguments
+         * @return array<string,mixed>
+         */
+        private function updatePermission(array $arguments, IAgentContext $context): array {
+                if (!$this->accessPolicy->isAllowed(MemoraAgentAccessPolicy::CAPABILITY_ROLE_ADMIN, $this->config, $context)) {
+                        return $this->resultBuilder->error(self::TOOL_UPDATE_PERMISSION, 'capability_denied', 'Permission administration is not allowed for this tool configuration.');
+                }
+
+                $permissionId = $arguments['permission_id'] ?? null;
+                if ($permissionId === null || $permissionId === '') {
+                        return $this->resultBuilder->error(self::TOOL_UPDATE_PERMISSION, 'missing_permission_id', 'Missing required parameter: permission_id.');
+                }
+
+                $patch = $this->normalizePermissionData($arguments, false);
+                if ($patch === []) {
+                        return $this->resultBuilder->error(self::TOOL_UPDATE_PERMISSION, 'empty_permission_patch', 'Provide at least one supported permission field to update.');
+                }
+
+                $plan = [
+                        'operation' => 'update_permission',
+                        'permission_id' => $permissionId,
+                        'patch' => $patch
+                ];
+
+                if ($this->needsConfirmation($arguments)) {
+                        return $this->confirmation(self::TOOL_UPDATE_PERMISSION, 'Permission update requires user confirmation before execution.', $plan, $arguments);
+                }
+
+                $this->accessService->updatePermission($permissionId, $patch);
+
+                return $this->resultBuilder->success(
+                        self::TOOL_UPDATE_PERMISSION,
+                        'Permission updated.',
+                        [
+                                'permission_id' => $permissionId,
+                                'permission' => $this->accessService->getPermission($permissionId)
+                        ]
+                );
+        }
+
+        /**
+         * @param array<string,mixed> $arguments
+         * @return array<string,mixed>
+         */
+        private function archivePermission(array $arguments, IAgentContext $context): array {
+                if (!$this->accessPolicy->isAllowed(MemoraAgentAccessPolicy::CAPABILITY_ROLE_ADMIN, $this->config, $context)
+                        || !$this->accessPolicy->isAllowed(MemoraAgentAccessPolicy::CAPABILITY_DESTRUCTIVE, $this->config, $context)) {
+                        return $this->resultBuilder->error(self::TOOL_ARCHIVE_PERMISSION, 'capability_denied', 'Permission archiving is not allowed for this tool configuration.');
+                }
+
+                $permissionId = $arguments['permission_id'] ?? null;
+                if ($permissionId === null || $permissionId === '') {
+                        return $this->resultBuilder->error(self::TOOL_ARCHIVE_PERMISSION, 'missing_permission_id', 'Missing required parameter: permission_id.');
+                }
+
+                $plan = [
+                        'operation' => 'archive_permission',
+                        'permission_id' => $permissionId,
+                        'permission_before' => $this->accessService->getPermission($permissionId)
+                ];
+
+                if ($this->needsConfirmation($arguments)) {
+                        return $this->confirmation(self::TOOL_ARCHIVE_PERMISSION, 'Permission archiving requires user confirmation before execution.', $plan, $arguments);
+                }
+
+                $this->accessService->archivePermission($permissionId);
+
+                return $this->resultBuilder->success(self::TOOL_ARCHIVE_PERMISSION, 'Permission archived.', ['permission_id' => $permissionId]);
+        }
+
+        /**
+         * @param array<string,mixed> $arguments
+         * @return array<string,mixed>
+         */
+        private function replaceRolePermissions(array $arguments, IAgentContext $context): array {
+                if (!$this->accessPolicy->isAllowed(MemoraAgentAccessPolicy::CAPABILITY_ROLE_ADMIN, $this->config, $context)) {
+                        return $this->resultBuilder->error(self::TOOL_REPLACE_ROLE_PERMISSIONS, 'capability_denied', 'Role permission changes are not allowed for this tool configuration.');
+                }
+
+                $roleId = $arguments['role_id'] ?? null;
+                if ($roleId === null || $roleId === '') {
+                        return $this->resultBuilder->error(self::TOOL_REPLACE_ROLE_PERMISSIONS, 'missing_role_id', 'Missing required parameter: role_id.');
+                }
+
+                $permissionIds = $this->normalizer->normalizeIdList($arguments['permission_ids'] ?? []);
+                $plan = [
+                        'operation' => 'replace_role_permissions',
+                        'role_id' => $roleId,
+                        'permission_ids' => $permissionIds
+                ];
+
+                if ($this->needsConfirmation($arguments)) {
+                        return $this->confirmation(self::TOOL_REPLACE_ROLE_PERMISSIONS, 'Role permission replacement requires user confirmation before execution.', $plan, $arguments);
+                }
+
+                $this->accessService->replaceRolePermissions($roleId, $permissionIds);
+
+                return $this->resultBuilder->success(
+                        self::TOOL_REPLACE_ROLE_PERMISSIONS,
+                        'Role permissions replaced.',
+                        [
+                                'role_id' => $roleId,
+                                'permissions' => $this->accessService->getRolePermissions($roleId)
+                        ]
+                );
+        }
+
+        /**
+         * @param array<string,mixed> $arguments
+         * @return array<string,mixed>
+         */
         private function replacePrincipalRoles(array $arguments, IAgentContext $context): array {
                 if (!$this->accessPolicy->isAllowed(MemoraAgentAccessPolicy::CAPABILITY_MEMBERSHIP_ADMIN, $this->config, $context)) {
                         return $this->resultBuilder->error(self::TOOL_REPLACE_PRINCIPAL_ROLES, 'capability_denied', 'Role assignment changes are not allowed for this tool configuration.');
@@ -941,14 +1454,6 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                                 'type' => 'string',
                                 'description' => 'Stable technical role name.'
                         ],
-                        'scope' => [
-                                'type' => 'string',
-                                'description' => 'Role scope, for example entry.'
-                        ],
-                        'permission' => [
-                                'type' => 'string',
-                                'description' => 'Role permission, for example view or edit.'
-                        ],
                         'label' => [
                                 'type' => 'string',
                                 'description' => 'Optional human-readable label.'
@@ -956,6 +1461,42 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                         'info' => [
                                 'type' => 'string',
                                 'description' => 'Optional role description or notes.'
+                        ],
+                        'permission_ids' => [
+                                'type' => 'array',
+                                'description' => 'Optional complete permission id list to assign to the role.'
+                        ],
+                        'permissions' => [
+                                'type' => 'array',
+                                'description' => 'Optional permission rows to create or resolve while creating/updating the role.'
+                        ],
+                        'archive' => [
+                                'type' => 'boolean',
+                                'description' => 'Optional archive flag.'
+                        ]
+                ];
+        }
+
+        /**
+         * @return array<string,array<string,mixed>>
+         */
+        private function permissionSchemaProperties(): array {
+                return [
+                        'scope' => [
+                                'type' => 'string',
+                                'description' => 'Permission scope, for example entry, user, group, role or system.'
+                        ],
+                        'permission' => [
+                                'type' => 'string',
+                                'description' => 'Permission name, for example admin, create, manage or assign.'
+                        ],
+                        'label' => [
+                                'type' => 'string',
+                                'description' => 'Optional human-readable label.'
+                        ],
+                        'info' => [
+                                'type' => 'string',
+                                'description' => 'Optional permission description or notes.'
                         ],
                         'archive' => [
                                 'type' => 'boolean',
@@ -1079,7 +1620,7 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
         private function normalizeRoleData(array $arguments, bool $requireCore): array {
                 $role = [];
 
-                foreach (['name', 'scope', 'permission', 'label', 'info'] as $key) {
+                foreach (['name', 'label', 'info'] as $key) {
                         if (!array_key_exists($key, $arguments)) {
                                 continue;
                         }
@@ -1090,19 +1631,118 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                         }
                 }
 
+                if (array_key_exists('permission_ids', $arguments)) {
+                        $role['permission_ids'] = $this->normalizer->normalizeIdList($arguments['permission_ids']);
+                }
+
+                if (array_key_exists('permissions', $arguments) && is_array($arguments['permissions'])) {
+                        $role['permissions'] = $this->normalizePermissionRows($arguments['permissions']);
+                }
+
                 if (array_key_exists('archive', $arguments)) {
                         $role['archive'] = $this->normalizer->normalizeBool($arguments['archive'], false) ? 1 : 0;
                 }
 
+                if ($requireCore && (!isset($role['name']) || $role['name'] === '')) {
+                        return [];
+                }
+
+                return $role;
+        }
+
+        /**
+         * @param array<string,mixed> $arguments
+         * @return array<string,mixed>
+         */
+        private function normalizePermissionData(array $arguments, bool $requireCore): array {
+                $permission = [];
+
+                foreach (['scope', 'permission', 'label', 'info'] as $key) {
+                        if (!array_key_exists($key, $arguments)) {
+                                continue;
+                        }
+
+                        $value = $key === 'scope' || $key === 'permission'
+                                ? $this->normalizer->normalizeToken((string)($arguments[$key] ?? ''))
+                                : $this->normalizer->normalizeString($arguments[$key] ?? '');
+                        if ($value !== '') {
+                                $permission[$key] = $value;
+                        }
+                }
+
+                if (array_key_exists('archive', $arguments)) {
+                        $permission['archive'] = $this->normalizer->normalizeBool($arguments['archive'], false) ? 1 : 0;
+                }
+
                 if ($requireCore) {
-                        foreach (['name', 'scope', 'permission'] as $key) {
-                                if (!isset($role[$key]) || $role[$key] === '') {
+                        foreach (['scope', 'permission'] as $key) {
+                                if (!isset($permission[$key]) || $permission[$key] === '') {
                                         return [];
                                 }
                         }
                 }
 
-                return $role;
+                return $permission;
+        }
+
+        /**
+         * @param array<int,mixed> $rows
+         * @return array<int,array<string,mixed>|int|string>
+         */
+        private function normalizePermissionRows(array $rows): array {
+                $out = [];
+
+                foreach ($rows as $row) {
+                        if (is_int($row) || is_string($row)) {
+                                $id = $this->normalizeId($row);
+                                if ((string)$id !== '') {
+                                        $out[] = $id;
+                                }
+                                continue;
+                        }
+
+                        if (!is_array($row)) {
+                                continue;
+                        }
+
+                        $permission = [];
+                        if (array_key_exists('id', $row)) {
+                                $permission['id'] = $this->normalizeId($row['id']);
+                        }
+
+                        foreach (['scope', 'permission', 'label', 'info'] as $key) {
+                                if (!array_key_exists($key, $row)) {
+                                        continue;
+                                }
+
+                                $value = $key === 'scope' || $key === 'permission'
+                                        ? $this->normalizer->normalizeToken((string)($row[$key] ?? ''))
+                                        : $this->normalizer->normalizeString($row[$key] ?? '');
+                                if ($value !== '') {
+                                        $permission[$key] = $value;
+                                }
+                        }
+
+                        if ($permission !== []) {
+                                $out[] = $permission;
+                        }
+                }
+
+                return $out;
+        }
+
+        /**
+         * @param array<int,array<string,mixed>> $permissions
+         */
+        private function roleHasPermissionField(array $permissions, string $field, string $value): bool {
+                foreach ($permissions as $permission) {
+                        if (!is_array($permission)) continue;
+                        if ($this->normalizer->normalizeToken((string)($permission[$field] ?? '')) === $value) {
+                                return true;
+                        }
+                }
+
+                return false;
         }
 
         /**

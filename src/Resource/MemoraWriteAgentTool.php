@@ -6,7 +6,7 @@
 
 namespace MissionBayMemora\Resource;
 
-use MissionBay\Api\IAgentContext;
+use AssistantFoundation\Api\IAgentContext;
 use MissionBay\Api\IAgentPromptProvider;
 use MissionBay\Api\IAgentTool;
 use MissionBay\Resource\AbstractAgentResource;
@@ -110,11 +110,6 @@ class MemoraWriteAgentTool extends AbstractAgentResource implements IAgentTool, 
                                                                 'items' => ['type' => 'object'],
                                                                 'description' => 'Optional group access rows.'
                                                         ],
-                                                        'roleaccess' => [
-                                                                'type' => 'array',
-                                                                'items' => ['type' => 'object'],
-                                                                'description' => 'Optional role access rows.'
-                                                        ],
                                                         'include' => [
                                                                 'type' => 'array',
                                                                 'items' => [
@@ -149,7 +144,7 @@ class MemoraWriteAgentTool extends AbstractAgentResource implements IAgentTool, 
                                                         ],
                                                         'patch' => [
                                                                 'type' => 'object',
-                                                                'description' => 'Native Memora update patch. Supported keys include set, setname, setdata, unsetdata, setmetadata, unsetmetadata, addtags, removetags, replacetags, addallocs, removeallocs, replaceallocs, adduseraccess, removeuseraccess, replaceuseraccess, addgroupaccess, removegroupaccess, replacegroupaccess, addroleaccess, removeroleaccess, replaceroleaccess.'
+                                                                'description' => 'Native Memora update patch. Supported keys include set, setname, setdata, unsetdata, setmetadata, unsetmetadata, addtags, removetags, replacetags, addallocs, removeallocs, replaceallocs, adduseraccess, removeuseraccess, replaceuseraccess, addgroupaccess, removegroupaccess, replacegroupaccess.'
                                                         ],
                                                         'set' => [
                                                                 'type' => 'object',
@@ -420,7 +415,7 @@ class MemoraWriteAgentTool extends AbstractAgentResource implements IAgentTool, 
                         $entry['name'] = $name;
                 }
 
-                foreach (['data', 'metadata', 'useraccess', 'groupaccess', 'roleaccess'] as $key) {
+                foreach (['data', 'metadata', 'useraccess', 'groupaccess'] as $key) {
                         if (isset($arguments[$key]) && is_array($arguments[$key]) && $arguments[$key] !== []) {
                                 $entry[$key] = $arguments[$key];
                         }

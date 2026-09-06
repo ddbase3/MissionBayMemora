@@ -92,7 +92,6 @@ tags          tag list
 relations     related entry ids, mapped to Memora allocs
 useraccess    optional direct user access rows
 groupaccess   optional group access rows
-roleaccess    optional role access rows
 include       aspects to load after creation
 confirm       false for plan, true for execution
 ```
@@ -136,7 +135,7 @@ include           aspects to load after update
 confirm           false for plan, true for execution
 ```
 
-The tool intentionally forwards the final patch to the existing Memora update pipeline. Access checks, delete-lock checks, typed data handling, metadata handling, tag handling, relation handling, user access, group access, and role access stay inside the existing ResourceFoundation/Memora layer.
+The tool intentionally forwards the final patch to the existing Memora update pipeline. Access checks, delete-lock checks, typed data handling, metadata handling, tag handling, relation handling, user access and group access stay inside the existing ResourceFoundation/Memora layer. Role access is no longer part of entry ACL; use the access/RBAC tools for roles and permissions.
 
 ## Policy
 
