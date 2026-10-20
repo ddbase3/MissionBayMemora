@@ -1,3 +1,11 @@
+# Authorization integration (2026-10-19)
+
+Entry ACL tools now read XRM native grant DTOs through
+`IAuthorizationAdministrationService` and submit complete user/group replacements
+via the existing `IEntityDataService::updateEntry()` pipeline. Role/permission
+catalog tools use `IAuthorizationCatalogService`. Neither path uses the removed
+`IEntityAccessService` nor reimplements server-side policy evaluation.
+
 # MissionBayMemora
 
 ## Patch 11 correction: Memora is the semantic source of truth
@@ -29,7 +37,8 @@ ResourceFoundation\Api\IEntityTagService
 ResourceFoundation\Api\IEntityStructureService
 ResourceFoundation\Api\IEntityActivityService
 ResourceFoundation\Api\IEntityUserDataService
-ResourceFoundation\Api\IEntityAccessService
+Base3\Authorization\Api\IAuthorizationCatalogService
+Base3\Authorization\Api\IAuthorizationAdministrationService
 ResourceFoundation\Api\IEntityProfileService
 ```
 
@@ -457,7 +466,7 @@ IEntityTagService
 IEntityStructureService
 IEntityActivityService
 IEntityUserDataService
-IEntityAccessService
+IAuthorizationCatalogService / IAuthorizationAdministrationService
 IEntityProfileService
 ```
 

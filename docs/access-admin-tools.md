@@ -1,6 +1,6 @@
 # MissionBayMemora Access, Role and Permission Tools
 
-MissionBayMemora exposes entry ACL administration and RBAC administration through `ResourceFoundation\Api\IEntityAccessService`.
+MissionBayMemora exposes entry ACL administration and RBAC administration through `Base3\Authorization\Api\IAuthorizationAdministrationService` and `Base3\Authorization\Api\IAuthorizationCatalogService`, with bulk native ACL changes delegated to `IEntityDataService::updateEntry()`.
 
 The implementation remains a ResourceFoundation bridge. It does not call Memora tables or Memora implementation classes directly.
 
@@ -58,7 +58,7 @@ Result data contains:
 }
 ```
 
-The exact inner rows are defined by the active ResourceFoundation implementation.
+The rows are assembled from native XRM user/group grants, as returned by the server authorization administration service.
 
 ### `memora_get_roles`
 

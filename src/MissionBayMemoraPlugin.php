@@ -24,7 +24,8 @@ use MissionBayMemora\Service\MemoraAgentEntryFormatter;
 use MissionBayMemora\Service\MemoraAgentInputNormalizer;
 use MissionBayMemora\Service\MemoraAgentResultBuilder;
 use MissionBayMemora\Service\MemoraXrmSemanticModel;
-use ResourceFoundation\Api\IEntityAccessService;
+use Base3\Authorization\Api\IAuthorizationCatalogService;
+use Base3\Authorization\Api\IAuthorizationAdministrationService;
 use ResourceFoundation\Api\IEntityActivityService;
 use ResourceFoundation\Api\IEntityDataService;
 use ResourceFoundation\Api\IEntityFileService;
@@ -78,7 +79,8 @@ class MissionBayMemoraPlugin implements IPlugin, ICheck {
 			IEntityStructureService::class,
 			IEntityActivityService::class,
 			IEntityUserDataService::class,
-			IEntityAccessService::class,
+			IAuthorizationCatalogService::class,
+			IAuthorizationAdministrationService::class,
 			IEntityProfileService::class
 		];
 

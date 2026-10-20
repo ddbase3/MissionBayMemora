@@ -14,7 +14,10 @@ use MissionBay\Resource\AbstractAgentResource;
 use MissionBayMemora\Service\MemoraAgentAccessPolicy;
 use MissionBayMemora\Service\MemoraAgentInputNormalizer;
 use MissionBayMemora\Service\MemoraAgentResultBuilder;
-use ResourceFoundation\Api\IEntityAccessService;
+use Base3\Authorization\Api\IAuthorizationAdministrationService;
+use Base3\Authorization\Api\IAuthorizationCatalogService;
+use Base3\Authorization\Dto\ResourceReference;
+use ResourceFoundation\Api\IEntityDataService;
 
 /**
  * Memora/XRM access and RBAC administration tool.
@@ -52,7 +55,9 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
         ];
 
         public function __construct(
-                private readonly IEntityAccessService $accessService,
+                private readonly IAuthorizationCatalogService $catalog,
+                private readonly IAuthorizationAdministrationService $grantAdministration,
+                private readonly IEntityDataService $entityDataService,
                 private readonly MemoraAgentInputNormalizer $normalizer,
                 private readonly MemoraAgentResultBuilder $resultBuilder,
                 private readonly MemoraAgentAccessPolicy $accessPolicy,
@@ -772,6 +777,30 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                 return null;
         }
 
+        /** Returns the single authoritative XRM entry-grant view in the legacy tool response shape. */
+        private function readEntryAccess(int|string $entryId): array {
+                $resource = new ResourceReference('xrm', 'entry', $entryId);
+                $grants = $this->grantAdministration->getGrants($resource);
+                $access = ['useraccess' => [], 'groupaccess' => []];
+                foreach ($grants as $grant) {
+                        $subject = $grant->subject;
+                        if ($subject->kind === 'user') {
+                                $access['useraccess'][] = [
+                                        'entry_id' => $entryId,
+                                        'user_id' => $subject->id,
+                                        'mode' => $grant->permission->permission
+                                ];
+                        } elseif ($subject->kind === 'group') {
+                                $access['groupaccess'][] = [
+                                        'entry_id' => $entryId,
+                                        'group_id' => $subject->id,
+                                        'mode' => $grant->permission->permission
+                                ];
+                        }
+                }
+                return $access;
+        }
+
         /**
          * @param array<string,mixed> $arguments
          * @return array<string,mixed>
@@ -791,7 +820,7 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                         'Entry access loaded.',
                         [
                                 'entry_id' => $entryId,
-                                'access' => $this->accessService->getEntryAccess($entryId)
+                                'access' => $this->readEntryAccess($entryId)
                         ]
                 );
         }
@@ -812,7 +841,7 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                 $limit = $this->normalizer->normalizeLimit($arguments['limit'] ?? 25, 25, self::MAX_LIMIT);
                 $offset = $this->normalizer->normalizeOffset($arguments['offset'] ?? 0);
 
-                $roles = $this->accessService->getRoles($includeArchived);
+                $roles = $this->catalog->getRoles($includeArchived);
                 $roles = array_values(array_filter($roles, function(array $role) use ($scope, $permission, $query): bool {
                         $permissions = is_array($role['permissions'] ?? null) ? $role['permissions'] : [];
 
@@ -882,7 +911,7 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                         return $this->resultBuilder->error(self::TOOL_GET_ROLE, 'missing_role_id', 'Missing required parameter: role_id.');
                 }
 
-                $role = $this->accessService->getRole($roleId);
+                $role = $this->catalog->getRole($roleId);
                 if ($role === null) {
                         return $this->resultBuilder->error(self::TOOL_GET_ROLE, 'role_not_found', 'Role not found.');
                 }
@@ -913,7 +942,7 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                 $limit = $this->normalizer->normalizeLimit($arguments['limit'] ?? 25, 25, self::MAX_LIMIT);
                 $offset = $this->normalizer->normalizeOffset($arguments['offset'] ?? 0);
 
-                $permissions = $this->accessService->getPermissions($includeArchived);
+                $permissions = $this->catalog->getPermissions($includeArchived);
                 $permissions = array_values(array_filter($permissions, function(array $row) use ($scope, $permission, $query): bool {
                         if ($scope !== '' && $this->normalizer->normalizeToken((string)($row['scope'] ?? '')) !== $scope) {
                                 return false;
@@ -979,7 +1008,7 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                         return $this->resultBuilder->error(self::TOOL_GET_PERMISSION, 'missing_permission_id', 'Missing required parameter: permission_id.');
                 }
 
-                $permission = $this->accessService->getPermission($permissionId);
+                $permission = $this->catalog->getPermission($permissionId);
                 if ($permission === null) {
                         return $this->resultBuilder->error(self::TOOL_GET_PERMISSION, 'permission_not_found', 'Permission not found.');
                 }
@@ -1013,7 +1042,7 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                         'Role permissions loaded.',
                         [
                                 'role_id' => $roleId,
-                                'permissions' => $this->accessService->getRolePermissions($roleId)
+                                'permissions' => $this->catalog->getRolePermissions($roleId)
                         ]
                 );
         }
@@ -1040,17 +1069,17 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                 ];
 
                 if ($type === 'user') {
-                        $data['roles'] = $this->accessService->getUserRoles($id);
+                        $data['roles'] = $this->catalog->getUserRoles($id);
 
                         if ($this->normalizer->normalizeBool($arguments['include_effective'] ?? true, true)) {
-                                $data['effective_roles'] = $this->accessService->getEffectiveUserRoles($id);
+                                $data['effective_roles'] = $this->catalog->getEffectiveUserRoles($id);
                         }
 
                         if ($this->normalizer->normalizeBool($arguments['include_groups'] ?? true, true)) {
-                                $data['group_ids'] = $this->accessService->getUserGroups($id);
+                                $data['group_ids'] = $this->catalog->getUserGroups($id);
                         }
                 } else {
-                        $data['roles'] = $this->accessService->getGroupRoles($id);
+                        $data['roles'] = $this->catalog->getGroupRoles($id);
                 }
 
                 return $this->resultBuilder->success(self::TOOL_GET_PRINCIPAL_ROLES, 'Principal roles loaded.', $data);
@@ -1096,20 +1125,23 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                         return $this->confirmation(self::TOOL_SET_ENTRY_ACCESS, 'Entry access replacement requires user confirmation before execution.', $plan, $arguments);
                 }
 
+                // The authoritative Memora entity update pipeline validates edit access and
+                // applies both ACL lists in one native transaction, avoiding partial updates.
+                $patch = [];
                 if (array_key_exists('users', $plan['replace'])) {
-                        $this->accessService->replaceEntryUserAccess($entryId, $plan['replace']['users']);
+                        $patch['replaceuseraccess'] = $plan['replace']['users'];
                 }
-
                 if (array_key_exists('groups', $plan['replace'])) {
-                        $this->accessService->replaceEntryGroupAccess($entryId, $plan['replace']['groups']);
+                        $patch['replacegroupaccess'] = $plan['replace']['groups'];
                 }
+                $this->entityDataService->updateEntry($entryId, $patch);
 
                 return $this->resultBuilder->success(
                         self::TOOL_SET_ENTRY_ACCESS,
                         'Entry access replaced.',
                         [
                                 'entry_id' => $entryId,
-                                'access' => $this->accessService->getEntryAccess($entryId)
+                                'access' => $this->readEntryAccess($entryId)
                         ]
                 );
         }
@@ -1137,14 +1169,14 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                         return $this->confirmation(self::TOOL_CREATE_ROLE, 'Role creation requires user confirmation before execution.', $plan, $arguments);
                 }
 
-                $roleId = $this->accessService->createRole($role);
+                $roleId = $this->catalog->createRole($role);
 
                 return $this->resultBuilder->success(
                         self::TOOL_CREATE_ROLE,
                         'Role created.',
                         [
                                 'role_id' => $roleId,
-                                'role' => $this->accessService->getRole($roleId)
+                                'role' => $this->catalog->getRole($roleId)
                         ]
                 );
         }
@@ -1178,14 +1210,14 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                         return $this->confirmation(self::TOOL_UPDATE_ROLE, 'Role update requires user confirmation before execution.', $plan, $arguments);
                 }
 
-                $this->accessService->updateRole($roleId, $patch);
+                $this->catalog->updateRole($roleId, $patch);
 
                 return $this->resultBuilder->success(
                         self::TOOL_UPDATE_ROLE,
                         'Role updated.',
                         [
                                 'role_id' => $roleId,
-                                'role' => $this->accessService->getRole($roleId)
+                                'role' => $this->catalog->getRole($roleId)
                         ]
                 );
         }
@@ -1208,14 +1240,14 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                 $plan = [
                         'operation' => 'archive_role',
                         'role_id' => $roleId,
-                        'role_before' => $this->accessService->getRole($roleId)
+                        'role_before' => $this->catalog->getRole($roleId)
                 ];
 
                 if ($this->needsConfirmation($arguments)) {
                         return $this->confirmation(self::TOOL_ARCHIVE_ROLE, 'Role archiving requires user confirmation before execution.', $plan, $arguments);
                 }
 
-                $this->accessService->archiveRole($roleId);
+                $this->catalog->archiveRole($roleId);
 
                 return $this->resultBuilder->success(self::TOOL_ARCHIVE_ROLE, 'Role archived.', ['role_id' => $roleId]);
         }
@@ -1243,14 +1275,14 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                         return $this->confirmation(self::TOOL_CREATE_PERMISSION, 'Permission creation requires user confirmation before execution.', $plan, $arguments);
                 }
 
-                $permissionId = $this->accessService->createPermission($permission);
+                $permissionId = $this->catalog->createPermission($permission);
 
                 return $this->resultBuilder->success(
                         self::TOOL_CREATE_PERMISSION,
                         'Permission created.',
                         [
                                 'permission_id' => $permissionId,
-                                'permission' => $this->accessService->getPermission($permissionId)
+                                'permission' => $this->catalog->getPermission($permissionId)
                         ]
                 );
         }
@@ -1284,14 +1316,14 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                         return $this->confirmation(self::TOOL_UPDATE_PERMISSION, 'Permission update requires user confirmation before execution.', $plan, $arguments);
                 }
 
-                $this->accessService->updatePermission($permissionId, $patch);
+                $this->catalog->updatePermission($permissionId, $patch);
 
                 return $this->resultBuilder->success(
                         self::TOOL_UPDATE_PERMISSION,
                         'Permission updated.',
                         [
                                 'permission_id' => $permissionId,
-                                'permission' => $this->accessService->getPermission($permissionId)
+                                'permission' => $this->catalog->getPermission($permissionId)
                         ]
                 );
         }
@@ -1314,14 +1346,14 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                 $plan = [
                         'operation' => 'archive_permission',
                         'permission_id' => $permissionId,
-                        'permission_before' => $this->accessService->getPermission($permissionId)
+                        'permission_before' => $this->catalog->getPermission($permissionId)
                 ];
 
                 if ($this->needsConfirmation($arguments)) {
                         return $this->confirmation(self::TOOL_ARCHIVE_PERMISSION, 'Permission archiving requires user confirmation before execution.', $plan, $arguments);
                 }
 
-                $this->accessService->archivePermission($permissionId);
+                $this->catalog->archivePermission($permissionId);
 
                 return $this->resultBuilder->success(self::TOOL_ARCHIVE_PERMISSION, 'Permission archived.', ['permission_id' => $permissionId]);
         }
@@ -1351,14 +1383,14 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                         return $this->confirmation(self::TOOL_REPLACE_ROLE_PERMISSIONS, 'Role permission replacement requires user confirmation before execution.', $plan, $arguments);
                 }
 
-                $this->accessService->replaceRolePermissions($roleId, $permissionIds);
+                $this->catalog->replaceRolePermissions($roleId, $permissionIds);
 
                 return $this->resultBuilder->success(
                         self::TOOL_REPLACE_ROLE_PERMISSIONS,
                         'Role permissions replaced.',
                         [
                                 'role_id' => $roleId,
-                                'permissions' => $this->accessService->getRolePermissions($roleId)
+                                'permissions' => $this->catalog->getRolePermissions($roleId)
                         ]
                 );
         }
@@ -1390,11 +1422,11 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                 }
 
                 if ($principal['type'] === 'user') {
-                        $this->accessService->replaceUserRoles($principal['id'], $roleIds);
-                        $roles = $this->accessService->getUserRoles($principal['id']);
+                        $this->catalog->replaceUserRoles($principal['id'], $roleIds);
+                        $roles = $this->catalog->getUserRoles($principal['id']);
                 } else {
-                        $this->accessService->replaceGroupRoles($principal['id'], $roleIds);
-                        $roles = $this->accessService->getGroupRoles($principal['id']);
+                        $this->catalog->replaceGroupRoles($principal['id'], $roleIds);
+                        $roles = $this->catalog->getGroupRoles($principal['id']);
                 }
 
                 return $this->resultBuilder->success(
@@ -1433,14 +1465,14 @@ class MemoraAccessAgentTool extends AbstractAgentResource implements IAgentTool,
                         return $this->confirmation(self::TOOL_REPLACE_USER_GROUPS, 'User group replacement requires user confirmation before execution.', $plan, $arguments);
                 }
 
-                $this->accessService->replaceUserGroups($userId, $groupIds);
+                $this->catalog->replaceUserGroups($userId, $groupIds);
 
                 return $this->resultBuilder->success(
                         self::TOOL_REPLACE_USER_GROUPS,
                         'User groups replaced.',
                         [
                                 'user_id' => $userId,
-                                'group_ids' => $this->accessService->getUserGroups($userId)
+                                'group_ids' => $this->catalog->getUserGroups($userId)
                         ]
                 );
         }
