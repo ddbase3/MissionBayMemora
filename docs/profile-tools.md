@@ -1,6 +1,6 @@
 # MissionBayMemora Profile Tools
 
-Package 08 adds profile tools based on `ResourceFoundation\Api\IEntityProfileService`.
+Package 08 adds profile tools based on `Base3\ResourceFoundation\Api\IEntityProfileService`.
 
 Profiles are user-specific Memora/XRM view or filter presets. The exact profile payload is backend-defined, but common fields are:
 

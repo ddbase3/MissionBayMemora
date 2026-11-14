@@ -10,7 +10,7 @@ MissionBayMemora does not bypass these checks.
 
 ## Tool-surface access
 
-`MissionBayMemora\Service\MemoraAgentAccessPolicy` controls which tool categories may execute from a MissionBay resource configuration.
+`Base3\MissionBayMemora\Service\MemoraAgentAccessPolicy` controls which tool categories may execute from a MissionBay resource configuration.
 
 This policy decides whether a tool is available at the agent/MCP surface. It is not the final data authorization layer.
 

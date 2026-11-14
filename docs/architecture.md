@@ -13,8 +13,8 @@ MissionBayMemora
 It intentionally avoids:
 
 ```text
-MissionBayMemora -> Memora\Service\*
-MissionBayMemora -> Memora\Api\*
+MissionBayMemora -> Base3\Memora\Service\*
+MissionBayMemora -> Base3\Memora\Api\*
 MissionBayMemora -> Memora database tables
 ```
 

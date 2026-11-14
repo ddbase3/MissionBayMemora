@@ -1,21 +1,21 @@
 # MissionBayMemora Access, Role and Permission Tools
 
-MissionBayMemora exposes entry ACL administration and RBAC administration through `Base3\Authorization\Api\IAuthorizationAdministrationService` and `Base3\Authorization\Api\IAuthorizationCatalogService`, with bulk native ACL changes delegated to `IEntityDataService::updateEntry()`.
+MissionBayMemora exposes entry ACL administration and RBAC administration through `Base3\CoreFoundation\Authorization\Api\IAuthorizationAdministrationService` and `Base3\CoreFoundation\Authorization\Api\IAuthorizationCatalogService`, with bulk native ACL changes delegated to `IEntityDataService::updateEntry()`.
 
 The implementation remains a ResourceFoundation bridge. It does not call Memora tables or Memora implementation classes directly.
 
 ## Tool class
 
 ```text
-MissionBayMemora\Resource\MemoraAccessAgentTool
+Base3\MissionBayMemora\Resource\MemoraAccessAgentTool
 ```
 
 The class implements:
 
 ```text
-MissionBay\Api\IAgentTool
-MissionBay\Api\IAgentResourceProvider
-MissionBay\Api\IAgentPromptProvider
+Base3\MissionBay\Api\IAgentTool
+Base3\MissionBay\Api\IAgentResourceProvider
+Base3\MissionBay\Api\IAgentPromptProvider
 ```
 
 ## Access model

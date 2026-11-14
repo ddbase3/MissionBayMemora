@@ -1,0 +1,13 @@
+{
+	"manifestVersion": 1,
+	"name": "MissionBayMemora",
+	"namespace": "Base3\\MissionBayMemora",
+	"version": "0.1.0",
+	"description": "MissionBayMemora connects MissionBay agents with XRM data. Its tools use ResourceFoundation entity services. Agent access and result handling stay in the existing owners.",
+	"dependencies": {
+		"AssistantFoundation": ">=4.18.0",
+		"CoreFoundation": ">=4.10.0",
+		"MissionBay": ">=4.40.0",
+		"ResourceFoundation": ">=4.5.0"
+	}
+}

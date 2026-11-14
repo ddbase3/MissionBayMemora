@@ -2,7 +2,7 @@
 
 Package 07 adds file tools for MissionBayMemora.
 
-The tools use `ResourceFoundation\Api\IEntityFileService` and never access Memora tables or file storage directly.
+The tools use `Base3\ResourceFoundation\Api\IEntityFileService` and never access Memora tables or file storage directly.
 
 ## Functions
 

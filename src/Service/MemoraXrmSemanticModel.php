@@ -2,12 +2,22 @@
 
 /***********************************************************************
  * This file is part of MissionBayMemora for BASE3 Framework.
- **********************************************************************/
+ *
+ * MissionBayMemora connects MissionBay agents with XRM data.
+ * Its tools use ResourceFoundation entity services.
+ * Agent access and result handling stay in the existing owners.
+ *
+ * Developed by Daniel Dahme
+ * Licensed under GPL-3.0
+ * https://www.gnu.org/licenses/gpl-3.0.en.html
+ *
+ * https://base3.de
+ ***********************************************************************/
 
-namespace MissionBayMemora\Service;
+namespace Base3\MissionBayMemora\Service;
 
-use ResourceFoundation\Api\IEntityStructureService;
-use ResourceFoundation\Api\IEntityTagService;
+use Base3\ResourceFoundation\Api\IEntityStructureService;
+use Base3\ResourceFoundation\Api\IEntityTagService;
 
 /**
  * Builds agent-facing semantic XRM descriptions from Memora itself.

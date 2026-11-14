@@ -29,17 +29,17 @@ MissionBayMemora is an agent/MCP bridge. It does not implement Memora storage lo
 The plugin consumes ResourceFoundation contracts such as:
 
 ```text
-ResourceFoundation\Api\IEntityDataService
-ResourceFoundation\Api\IEntityFileService
-ResourceFoundation\Api\IEntityRelationService
-ResourceFoundation\Api\IEntityMetadataService
-ResourceFoundation\Api\IEntityTagService
-ResourceFoundation\Api\IEntityStructureService
-ResourceFoundation\Api\IEntityActivityService
-ResourceFoundation\Api\IEntityUserDataService
-Base3\Authorization\Api\IAuthorizationCatalogService
-Base3\Authorization\Api\IAuthorizationAdministrationService
-ResourceFoundation\Api\IEntityProfileService
+Base3\ResourceFoundation\Api\IEntityDataService
+Base3\ResourceFoundation\Api\IEntityFileService
+Base3\ResourceFoundation\Api\IEntityRelationService
+Base3\ResourceFoundation\Api\IEntityMetadataService
+Base3\ResourceFoundation\Api\IEntityTagService
+Base3\ResourceFoundation\Api\IEntityStructureService
+Base3\ResourceFoundation\Api\IEntityActivityService
+Base3\ResourceFoundation\Api\IEntityUserDataService
+Base3\CoreFoundation\Authorization\Api\IAuthorizationCatalogService
+Base3\CoreFoundation\Authorization\Api\IAuthorizationAdministrationService
+Base3\ResourceFoundation\Api\IEntityProfileService
 ```
 
 This keeps the plugin portable across direct Memora runtimes, manager runtimes, and proxy-based deployments.
@@ -407,7 +407,7 @@ MissionBayMemora does not bypass Memora or ResourceFoundation access checks. Ent
 The plugin additionally provides tool-surface policy through:
 
 ```text
-MissionBayMemora\Service\MemoraAgentAccessPolicy
+Base3\MissionBayMemora\Service\MemoraAgentAccessPolicy
 ```
 
 Capabilities:
@@ -587,7 +587,7 @@ The semantic layer still explains Memora/XRM concepts to agents:
 New tool class:
 
 ```text
-MissionBayMemora\Resource\MemoraDomainProfileAgentTool
+Base3\MissionBayMemora\Resource\MemoraDomainProfileAgentTool
 ```
 
 New tools:

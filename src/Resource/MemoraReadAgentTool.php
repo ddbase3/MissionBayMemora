@@ -2,24 +2,34 @@
 
 /***********************************************************************
  * This file is part of MissionBayMemora for BASE3 Framework.
- **********************************************************************/
+ *
+ * MissionBayMemora connects MissionBay agents with XRM data.
+ * Its tools use ResourceFoundation entity services.
+ * Agent access and result handling stay in the existing owners.
+ *
+ * Developed by Daniel Dahme
+ * Licensed under GPL-3.0
+ * https://www.gnu.org/licenses/gpl-3.0.en.html
+ *
+ * https://base3.de
+ ***********************************************************************/
 
-namespace MissionBayMemora\Resource;
+namespace Base3\MissionBayMemora\Resource;
 
-use AssistantFoundation\Api\IAgentContext;
-use MissionBay\Api\IAgentPromptProvider;
-use MissionBay\Api\IAgentResourceProvider;
-use MissionBay\Api\IAgentTool;
-use MissionBay\Resource\AbstractAgentResource;
-use MissionBayMemora\Service\MemoraAgentEntryFormatter;
-use MissionBayMemora\Service\MemoraAgentInputNormalizer;
-use MissionBayMemora\Service\MemoraAgentResultBuilder;
-use ResourceFoundation\Api\IEntityActivityService;
-use ResourceFoundation\Api\IEntityDataService;
-use ResourceFoundation\Api\IEntityMetadataService;
-use ResourceFoundation\Api\IEntityRelationService;
-use ResourceFoundation\Api\IEntityTagService;
-use ResourceFoundation\Api\IEntityUserDataService;
+use Base3\AssistantFoundation\Api\IAgentContext;
+use Base3\MissionBay\Api\IAgentPromptProvider;
+use Base3\MissionBay\Api\IAgentResourceProvider;
+use Base3\MissionBay\Api\IAgentTool;
+use Base3\MissionBay\Resource\AbstractAgentResource;
+use Base3\MissionBayMemora\Service\MemoraAgentEntryFormatter;
+use Base3\MissionBayMemora\Service\MemoraAgentInputNormalizer;
+use Base3\MissionBayMemora\Service\MemoraAgentResultBuilder;
+use Base3\ResourceFoundation\Api\IEntityActivityService;
+use Base3\ResourceFoundation\Api\IEntityDataService;
+use Base3\ResourceFoundation\Api\IEntityMetadataService;
+use Base3\ResourceFoundation\Api\IEntityRelationService;
+use Base3\ResourceFoundation\Api\IEntityTagService;
+use Base3\ResourceFoundation\Api\IEntityUserDataService;
 
 /**
  * Read-only Memora/XRM agent tool.

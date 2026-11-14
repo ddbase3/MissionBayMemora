@@ -14,27 +14,27 @@
  * https://base3.de/v/missionbaymemora
  **********************************************************************/
 
-namespace MissionBayMemora;
+namespace Base3\MissionBayMemora;
 
-use Base3\Api\ICheck;
-use Base3\Api\IContainer;
-use Base3\Api\IPlugin;
-use MissionBayMemora\Service\MemoraAgentAccessPolicy;
-use MissionBayMemora\Service\MemoraAgentEntryFormatter;
-use MissionBayMemora\Service\MemoraAgentInputNormalizer;
-use MissionBayMemora\Service\MemoraAgentResultBuilder;
-use MissionBayMemora\Service\MemoraXrmSemanticModel;
-use Base3\Authorization\Api\IAuthorizationCatalogService;
-use Base3\Authorization\Api\IAuthorizationAdministrationService;
-use ResourceFoundation\Api\IEntityActivityService;
-use ResourceFoundation\Api\IEntityDataService;
-use ResourceFoundation\Api\IEntityFileService;
-use ResourceFoundation\Api\IEntityMetadataService;
-use ResourceFoundation\Api\IEntityProfileService;
-use ResourceFoundation\Api\IEntityRelationService;
-use ResourceFoundation\Api\IEntityStructureService;
-use ResourceFoundation\Api\IEntityTagService;
-use ResourceFoundation\Api\IEntityUserDataService;
+use Base3\CoreFoundation\Api\ICheck;
+use Base3\CoreFoundation\Api\IContainer;
+use Base3\CoreFoundation\Api\IPlugin;
+use Base3\MissionBayMemora\Service\MemoraAgentAccessPolicy;
+use Base3\MissionBayMemora\Service\MemoraAgentEntryFormatter;
+use Base3\MissionBayMemora\Service\MemoraAgentInputNormalizer;
+use Base3\MissionBayMemora\Service\MemoraAgentResultBuilder;
+use Base3\MissionBayMemora\Service\MemoraXrmSemanticModel;
+use Base3\CoreFoundation\Authorization\Api\IAuthorizationCatalogService;
+use Base3\CoreFoundation\Authorization\Api\IAuthorizationAdministrationService;
+use Base3\ResourceFoundation\Api\IEntityActivityService;
+use Base3\ResourceFoundation\Api\IEntityDataService;
+use Base3\ResourceFoundation\Api\IEntityFileService;
+use Base3\ResourceFoundation\Api\IEntityMetadataService;
+use Base3\ResourceFoundation\Api\IEntityProfileService;
+use Base3\ResourceFoundation\Api\IEntityRelationService;
+use Base3\ResourceFoundation\Api\IEntityStructureService;
+use Base3\ResourceFoundation\Api\IEntityTagService;
+use Base3\ResourceFoundation\Api\IEntityUserDataService;
 
 /**
  * MissionBayMemoraPlugin

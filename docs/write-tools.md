@@ -7,14 +7,14 @@ The write tools are designed for MissionBay agents and MCP clients that support 
 ## Tool class
 
 ```text
-MissionBayMemora\Resource\MemoraWriteAgentTool
+Base3\MissionBayMemora\Resource\MemoraWriteAgentTool
 ```
 
 The class implements:
 
 ```text
-MissionBay\Api\IAgentTool
-MissionBay\Api\IAgentPromptProvider
+Base3\MissionBay\Api\IAgentTool
+Base3\MissionBay\Api\IAgentPromptProvider
 ```
 
 It does not implement `IAgentResourceProvider`, because write operations are actions, not read-only resources.
@@ -24,11 +24,11 @@ It does not implement `IAgentResourceProvider`, because write operations are act
 The tool depends only on ResourceFoundation contracts and MissionBayMemora helpers:
 
 ```text
-ResourceFoundation\Api\IEntityDataService
-MissionBayMemora\Service\MemoraAgentInputNormalizer
-MissionBayMemora\Service\MemoraAgentEntryFormatter
-MissionBayMemora\Service\MemoraAgentResultBuilder
-MissionBayMemora\Service\MemoraAgentAccessPolicy
+Base3\ResourceFoundation\Api\IEntityDataService
+Base3\MissionBayMemora\Service\MemoraAgentInputNormalizer
+Base3\MissionBayMemora\Service\MemoraAgentEntryFormatter
+Base3\MissionBayMemora\Service\MemoraAgentResultBuilder
+Base3\MissionBayMemora\Service\MemoraAgentAccessPolicy
 ```
 
 It does not depend on Memora implementation classes.

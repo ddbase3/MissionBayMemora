@@ -2,7 +2,7 @@
 
 Package 07 adds user-data tools for MissionBayMemora.
 
-The tools use `ResourceFoundation\Api\IEntityUserDataService` and treat user data as per-user entry state, separate from entry-wide metadata.
+The tools use `Base3\ResourceFoundation\Api\IEntityUserDataService` and treat user data as per-user entry state, separate from entry-wide metadata.
 
 ## Functions
 

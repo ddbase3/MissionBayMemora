@@ -5,23 +5,23 @@ This document describes the activity package for MissionBayMemora.
 ## Tool class
 
 ```text
-MissionBayMemora\Resource\MemoraActivityAgentTool
+Base3\MissionBayMemora\Resource\MemoraActivityAgentTool
 ```
 
 The class implements:
 
 ```text
-MissionBay\Api\IAgentTool
-MissionBay\Api\IAgentPromptProvider
+Base3\MissionBay\Api\IAgentTool
+Base3\MissionBay\Api\IAgentPromptProvider
 ```
 
 ## Services used
 
 ```text
-ResourceFoundation\Api\IEntityActivityService
-MissionBayMemora\Service\MemoraAgentInputNormalizer
-MissionBayMemora\Service\MemoraAgentResultBuilder
-MissionBayMemora\Service\MemoraAgentAccessPolicy
+Base3\ResourceFoundation\Api\IEntityActivityService
+Base3\MissionBayMemora\Service\MemoraAgentInputNormalizer
+Base3\MissionBayMemora\Service\MemoraAgentResultBuilder
+Base3\MissionBayMemora\Service\MemoraAgentAccessPolicy
 ```
 
 ## `memora_get_activity`
